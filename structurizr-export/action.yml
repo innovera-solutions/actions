@@ -113,10 +113,16 @@ runs:
         set -euo pipefail
         WAR="$HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war"
         pushd "${{ github.workspace }}/${{ inputs.structurizr_dir }}" >/dev/null
-        nohup java -jar ${WAR} --server.port=${{ inputs.port }} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
+        nohup java -jar ${WAR} --port=${{ inputs.port }} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
           > structurizr-lite.log 2>&1 &
         echo $! > structurizr-lite.pid
         popd >/dev/null
+
+    - name: Tail Lite log
+      shell: bash
+      run: |
+        sleep 5
+        tail -n 100 "${{ github.workspace }}/${{ inputs.structurizr_dir }}/structurizr-lite.log" || true
 
     - name: Wait for Lite
       shell: bash
