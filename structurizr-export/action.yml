@@ -97,7 +97,7 @@ runs:
       run: |
         set -euo pipefail
         BASE_URL="http://localhost:${{ inputs.port }}"
-        rm -rf Generated && mkdir -p Generated
+        #rm -rf Generated && mkdir -p Generated
 
         # Match folders like 1-foo, 2-bar, or just 1
         mapfile -t WS_DIRS < <(find "${{ inputs.structurizr_dir }}" -maxdepth 1 -mindepth 1 -type d -regex '.*/[0-9]+[-A-Za-z0-9_]*$' | sort)
