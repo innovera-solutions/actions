@@ -9,9 +9,9 @@ inputs:
     required: false
     default: '8081'
   lite_version:
-    description: 'Structurizr Lite version (jar) e.g. 2025.06.01'
+    description: 'Structurizr Lite release tag (e.g. v2025.03.28)'
     required: false
-    default: '2025.06.01'
+    default: 'v2025.03.28'
   commit_generated:
     description: 'Commit Generated/ back to repo'
     required: false
@@ -27,23 +27,21 @@ runs:
         java-version: '21'
 
     # Cache the Structurizr Lite JAR by version
-    - name: Cache Structurizr Lite jar
+    - name: Cache Structurizr Lite WAR
       id: cache-lite
       uses: actions/cache@v4
       with:
-        path: ~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar
-        key: structurizr-lite-${{ inputs.lite_version }}
+        path: ~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
+        key: structurizr-lite-${{ inputs.lite_tag }}
 
-    - name: Download Structurizr Lite jar (if missing)
+    - name: Download Structurizr Lite WAR (if missing)
       if: steps.cache-lite.outputs.cache-hit != 'true'
       shell: bash
       run: |
         set -euo pipefail
-        mkdir -p ~/.cache/structurizr-lite/${{ inputs.lite_version }}
-        # Officiële distributie-URL: vervang hieronder naar de correcte release-artefact locatie indien je een mirror gebruikt.
-        # Voorbeeld (fictief pad): https://static.structurizr.com/downloads/lite/structurizr-lite-${{ inputs.lite_version }}.jar
-        url="https://static.structurizr.com/downloads/lite/structurizr-lite-${{ inputs.lite_version }}.jar"
-        curl -fsSL "$url" -o ~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar
+        mkdir -p ~/.cache/structurizr-lite/${{ inputs.lite_tag }}
+        url="https://github.com/structurizr/lite/releases/download/${{ inputs.lite_tag }}/structurizr-lite.war"
+        curl -fL "$url" -o ~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
 
     # Cache node_modules of the action itself (we ship package-lock.json)
     - name: Cache node_modules
@@ -66,14 +64,14 @@ runs:
         cd "${{ github.action_path }}"
         npm ci
 
-    - name: Start Structurizr Lite (jar)
+    - name: Start Structurizr Lite (WAR)
       shell: bash
       run: |
         set -euo pipefail
-        JAR="~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar"
-        # Start in background, bind op de opgegeven poort, met jouw data dir als CWD
+        WAR="~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war"
         pushd "${{ github.workspace }}/${{ inputs.structurizr_dir }}" >/dev/null
-        nohup java -jar ${JAR} --port ${{ inputs.port }} > structurizr-lite.log 2>&1 &
+        nohup java -jar ${WAR} --server.port=${{ inputs.port }} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
+          > structurizr-lite.log 2>&1 &
         echo $! > structurizr-lite.pid
         popd >/dev/null
 
