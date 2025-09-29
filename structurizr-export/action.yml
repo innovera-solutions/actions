@@ -113,7 +113,7 @@ runs:
         set -euo pipefail
         WAR="$HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war"
         pushd "${{ github.workspace }}/${{ inputs.structurizr_dir }}" >/dev/null
-        nohup java -jar ${WAR} --port=${{ inputs.port }} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
+        nohup java -Dserver.port=${{ inputs.port }} -jar ${WAR} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
           > structurizr-lite.log 2>&1 &
         echo $! > structurizr-lite.pid
         popd >/dev/null
