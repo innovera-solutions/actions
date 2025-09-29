@@ -31,7 +31,7 @@ runs:
       id: cache-lite
       uses: actions/cache@v4
       with:
-        path: ~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
+        path: $HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
         key: structurizr-lite-${{ inputs.lite_tag }}
 
     - name: Download Structurizr Lite WAR (if missing)
@@ -39,9 +39,9 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        mkdir -p ~/.cache/structurizr-lite/${{ inputs.lite_tag }}
+        mkdir -p $HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}
         url="https://github.com/structurizr/lite/releases/download/${{ inputs.lite_tag }}/structurizr-lite.war"
-        curl -fL "$url" -o ~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
+        curl -fL "$url" -o $HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
 
     # Cache node_modules of the action itself (we ship package-lock.json)
     - name: Cache node_modules
@@ -54,7 +54,7 @@ runs:
     - name: Cache Puppeteer Chromium
       uses: actions/cache@v4
       with:
-        path: ~/.cache/puppeteer
+        path: $HOME/.cache/puppeteer
         key: puppeteer-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', github.action_path)) }}
 
     - name: Install dependencies (Puppeteer)
@@ -68,7 +68,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        WAR="~/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war"
+        WAR="$HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war"
         pushd "${{ github.workspace }}/${{ inputs.structurizr_dir }}" >/dev/null
         nohup java -jar ${WAR} --server.port=${{ inputs.port }} "${{ github.workspace }}/${{ inputs.structurizr_dir }}" \
           > structurizr-lite.log 2>&1 &
@@ -121,24 +121,12 @@ runs:
           popd >/dev/null
         done
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: structurizr-diagrams
-        path: Generated
-
-    - name: Commit Generated (optional)
-      if: ${{ inputs.commit_generated == 'true' }}
+    - name: Set outputs
+      id: set-outputs
       shell: bash
       run: |
-        if [ -n "$(git status --porcelain -- Generated)" ]; then
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git add Generated
-          git commit -m "chore(structurizr): export diagrams [skip ci]"
-          git push
-        fi
-
+        echo "generated_path=Generated" >> "$GITHUB_OUTPUT"
+        
     - name: Stop Lite
       if: always()
       shell: bash
