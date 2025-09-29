@@ -8,10 +8,10 @@ inputs:
     description: 'Host port for Lite HTTP server'
     required: false
     default: '8081'
-  lite_version:
-    description: 'Structurizr Lite release tag (e.g. v2025.03.28)'
+  lite_tag:
+    description: 'Structurizr Lite release tag (e.g. v2025.05.28)'
     required: false
-    default: 'v2025.03.28'
+    default: 'v2025.05.28'
   commit_generated:
     description: 'Commit Generated/ back to repo'
     required: false
