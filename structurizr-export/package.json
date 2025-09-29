@@ -1,0 +1,10 @@
+{
+  "name": "structurizr-export-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Export Structurizr Lite diagrams using Puppeteer",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "puppeteer": "24.22.3"
+  }
+}

@@ -1,0 +1,151 @@
+name: 'Structurizr export (PNG+SVG via Puppeteer)'
+description: 'Export all Structurizr Lite diagrams (from workspace.json) to PNG/SVG using headless Chrome'
+inputs:
+  structurizr_dir:
+    description: 'Path to Structurizr data dir (mounted dir with structurizr.properties and numbered workspace folders)'
+    required: true
+  port:
+    description: 'Host port for Lite HTTP server'
+    required: false
+    default: '8081'
+  lite_version:
+    description: 'Structurizr Lite version (jar) e.g. 2025.06.01'
+    required: false
+    default: '2025.06.01'
+  commit_generated:
+    description: 'Commit Generated/ back to repo'
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    # Cache the Structurizr Lite JAR by version
+    - name: Cache Structurizr Lite jar
+      id: cache-lite
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar
+        key: structurizr-lite-${{ inputs.lite_version }}
+
+    - name: Download Structurizr Lite jar (if missing)
+      if: steps.cache-lite.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p ~/.cache/structurizr-lite/${{ inputs.lite_version }}
+        # Officiële distributie-URL: vervang hieronder naar de correcte release-artefact locatie indien je een mirror gebruikt.
+        # Voorbeeld (fictief pad): https://static.structurizr.com/downloads/lite/structurizr-lite-${{ inputs.lite_version }}.jar
+        url="https://static.structurizr.com/downloads/lite/structurizr-lite-${{ inputs.lite_version }}.jar"
+        curl -fsSL "$url" -o ~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar
+
+    # Cache node_modules of the action itself (we ship package-lock.json)
+    - name: Cache node_modules
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.action_path }}/node_modules
+        key: ${{ runner.os }}-node20-${{ hashFiles(format('{0}/package-lock.json', github.action_path)) }}
+
+    # Cache Puppeteer's downloaded Chromium
+    - name: Cache Puppeteer Chromium
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/puppeteer
+        key: puppeteer-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', github.action_path)) }}
+
+    - name: Install dependencies (Puppeteer)
+      shell: bash
+      run: |
+        set -e
+        cd "${{ github.action_path }}"
+        npm ci
+
+    - name: Start Structurizr Lite (jar)
+      shell: bash
+      run: |
+        set -euo pipefail
+        JAR="~/.cache/structurizr-lite/${{ inputs.lite_version }}/structurizr-lite.jar"
+        # Start in background, bind op de opgegeven poort, met jouw data dir als CWD
+        pushd "${{ github.workspace }}/${{ inputs.structurizr_dir }}" >/dev/null
+        nohup java -jar ${JAR} --port ${{ inputs.port }} > structurizr-lite.log 2>&1 &
+        echo $! > structurizr-lite.pid
+        popd >/dev/null
+
+    - name: Wait for Lite
+      shell: bash
+      run: |
+        for i in {1..60}; do
+          if curl -fsS "http://localhost:${{ inputs.port }}/" >/dev/null; then
+            echo "Structurizr Lite is up"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "Structurizr Lite not responding" >&2
+        # dump last lines
+        tail -n 200 "${{ github.workspace }}/${{ inputs.structurizr_dir }}/structurizr-lite.log" || true
+        exit 1
+
+    - name: Export diagrams (all workspaces)
+      shell: bash
+      run: |
+        set -euo pipefail
+        BASE_URL="http://localhost:${{ inputs.port }}"
+        rm -rf Generated && mkdir -p Generated
+
+        # Match folders like 1-foo, 2-bar, or just 1
+        mapfile -t WS_DIRS < <(find "${{ inputs.structurizr_dir }}" -maxdepth 1 -mindepth 1 -type d -regex '.*/[0-9]+[-A-Za-z0-9_]*$' | sort)
+        if [ ${#WS_DIRS[@]} -eq 0 ]; then
+          echo "No workspace directories found in ${{ inputs.structurizr_dir }}" >&2
+          exit 1
+        fi
+
+        for d in "${WS_DIRS[@]}"; do
+          name="$(basename "$d")"
+          id="${name%%-*}"
+          if [ ! -f "$d/workspace.json" ]; then
+            echo "Skip ${name}: no workspace.json"
+            continue
+          fi
+          out="Generated/${name}"
+          mkdir -p "${out}"
+          echo "Workspace ${name} (id=${id}) -> ${out}"
+
+          pushd "${out}" >/dev/null
+          node "${{ github.action_path }}/scripts/export-diagrams.js" "${BASE_URL}/workspace/${id}/diagrams" svg
+          node "${{ github.action_path }}/scripts/export-diagrams.js" "${BASE_URL}/workspace/${id}/diagrams" png
+          popd >/dev/null
+        done
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: structurizr-diagrams
+        path: Generated
+
+    - name: Commit Generated (optional)
+      if: ${{ inputs.commit_generated == 'true' }}
+      shell: bash
+      run: |
+        if [ -n "$(git status --porcelain -- Generated)" ]; then
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git add Generated
+          git commit -m "chore(structurizr): export diagrams [skip ci]"
+          git push
+        fi
+
+    - name: Stop Lite
+      if: always()
+      shell: bash
+      run: |
+        PID_FILE="${{ github.workspace }}/${{ inputs.structurizr_dir }}/structurizr-lite.pid"
+        if [ -f "$PID_FILE" ]; then
+          kill "$(cat "$PID_FILE")" || true
+        fi
