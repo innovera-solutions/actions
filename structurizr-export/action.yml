@@ -17,6 +17,11 @@ inputs:
     required: false
     default: 'true'
 
+outputs:
+  generated_path:
+    description: 'Path to the Generated directory'
+    value: ${{ steps.set-outputs.outputs.generated_path }}
+    
 runs:
   using: "composite"
   steps:
@@ -126,7 +131,7 @@ runs:
       shell: bash
       run: |
         echo "generated_path=Generated" >> "$GITHUB_OUTPUT"
-        
+
     - name: Stop Lite
       if: always()
       shell: bash
