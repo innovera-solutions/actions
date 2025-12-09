@@ -14,7 +14,7 @@ inputs:
     default: 'v2025.05.28'
 
 outputs:
-  generated_path:
+  output_path:
     description: 'Path to the output directory'
     value: ${{ steps.set-outputs.outputs.output_path }}
 
