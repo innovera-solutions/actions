@@ -12,15 +12,11 @@ inputs:
     description: 'Structurizr Lite release tag (e.g. v2025.05.28)'
     required: false
     default: 'v2025.05.28'
-  commit_generated:
-    description: 'Commit Generated/ back to repo'
-    required: false
-    default: 'true'
 
 outputs:
   generated_path:
-    description: 'Path to the Generated directory'
-    value: ${{ steps.set-outputs.outputs.generated_path }}
+    description: 'Path to the output directory'
+    value: ${{ steps.set-outputs.outputs.output_path }}
 
 runs:
   using: "composite"
@@ -159,7 +155,7 @@ runs:
             echo "Skip ${name}: no workspace.json"
             continue
           fi
-          out="Generated/${name}"
+          out="structurizr/${name}"
           mkdir -p "${out}"
           echo "Workspace ${name} (id=${id}) -> ${out}"
 
@@ -173,7 +169,7 @@ runs:
       id: set-outputs
       shell: bash
       run: |
-        echo "generated_path=Generated" >> "$GITHUB_OUTPUT"
+        echo "output_path=structurizr" >> "$GITHUB_OUTPUT"
 
     - name: Stop Lite
       if: always()
