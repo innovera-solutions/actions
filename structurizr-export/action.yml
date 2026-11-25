@@ -30,7 +30,7 @@ runs:
     # Cache the Structurizr Lite JAR by version
     - name: Cache Structurizr Lite WAR
       id: cache-lite
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: $HOME/.cache/structurizr-lite/${{ inputs.lite_tag }}/structurizr-lite.war
         key: structurizr-lite-${{ inputs.lite_tag }}
@@ -46,14 +46,14 @@ runs:
 
     # Cache node_modules of the action itself (we ship package-lock.json)
     - name: Cache node_modules
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ github.action_path }}/node_modules
         key: ${{ runner.os }}-node20-${{ hashFiles(format('{0}/package-lock.json', github.action_path)) }}
 
     # Cache Puppeteer's downloaded Chromium
     - name: Cache Puppeteer Chromium
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: $HOME/.cache/puppeteer
         key: puppeteer-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', github.action_path)) }}
