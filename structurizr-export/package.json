@@ -5,6 +5,6 @@
   "description": "Export Structurizr Lite diagrams using Puppeteer",
   "license": "UNLICENSED",
   "dependencies": {
-    "puppeteer": "24.22.3"
+    "puppeteer": "24.43.1"
   }
 }
