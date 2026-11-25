@@ -25,7 +25,7 @@ runs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '21'
+        java-version: '25'
 
     # Cache the Structurizr Lite JAR by version
     - name: Cache Structurizr Lite WAR
